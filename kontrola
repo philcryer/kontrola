@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# kontrola 
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License at
+# <http://www.gnu.org/licenses/> for more details.
+#
+# ------------------------------------------------------------------------------
+
+## Variables to define
+# days until certificate experiation
+days_warning="30"
+# ports to check for SSL certifcates
+port_list="25 110 143 443 465 587 993 995 8443"
+# path to write html report to
+report_path="html"
+
+preFlight () {
+    echo -n "* Running preflight checks..."
+    for cli in awk date nmap openssl tr;
+    do
+        if ! type "$cli" > /dev/null 2>&1; then echo "ERROR: $cli is not installed, or in the PATH. Aborting."; fi
+    done
+    echo "passed"
+}
+
+findHosts(){
+    scan_ip=$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')
+    echo -n "* Scanning $scan_ip/24 subnet for live hosts..."
+    nmap -sn $scan_ip/24 | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
+    echo "$(cat scan_list | wc -l) found"
+}
+
+scanHosts(){
+   echo "${port_list[@]}" | tr ' ' '\n' > port_list
+   echo "* Scanning $(cat scan_list | wc -l) hosts for $(cat port_list | wc -l) open ports..."
+   cat scan_list | while read host_ip
+   do
+      cat port_list | while read host_port
+      do
+         echo "  -$host_ip:$host_port"
+         scan_result=$(nmap -p T:$host_port --open -n $host_ip |awk -F'/' '/open/ {print $1}' | wc -l)
+         if [ "$scan_result" == "1" ]; then
+             echo $host_ip:$host_port >> combo_list
+         fi
+      done
+   done
+}
+
+querySsl(){
+    touch green_list yellow_list red_list
+    echo "* Querying SSL info on $(cat combo_list | wc -l) host/port combos..."
+    now_epoch=$( date +%s )
+    cat combo_list | while read combo_set
+    do
+        echo -n "  -$combo_set   "
+        expiry_date=$( echo | openssl s_client -showcerts -connect $combo_set 2>/dev/null | openssl x509 -inform pem -noout -enddate | cut -d "=" -f 2 )
+        echo -n " $expiry_date";
+        expiry_epoch=$( date -d "$expiry_date" +%s )
+        expiry_days="$(( ($expiry_epoch - $now_epoch) / (3600 * 24) ))"
+        echo "    $expiry_days days"
+        if [[ "$expiry_days" -lt "1" ]]; then
+            echo "$combo_set    $expiry_date    $expiry_days days" >> red_list
+        elif [[ "$expiry_days" -lt "$days_warning" ]]; then
+            echo "$combo_set    $expiry_date    $expiry_days days" >> yellow_list
+        else
+            echo "$combo_set    $expiry_date    $expiry_days days" >> green_list
+        fi
+    done
+}
+
+genReport(){
+    mkdir ${scan_ip}_report
+    wepage_head="<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+    <title>SSL Report</title>
+  </head>"
+        
+    webpage_foot="<!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+  </body>
+</html>"
+
+echo $webpage_head > $report_path/index.html
+
+echo "  <body>
+    <h1>Hello, world!</h1>" > $report_path/index.html
+
+echo $webpage_foot > $report_path/index.html
+
+}
+
+cleanUp(){
+    rm -rf *_list
+}
+
+preFlight;
+cleanUp;
+findHosts;
+scanHosts;
+querySsl;
+genReport;
+cleanUp;
+
+exit 0
