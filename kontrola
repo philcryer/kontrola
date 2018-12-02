@@ -77,17 +77,18 @@ querySsl(){
 }
 
 genReport(){
-    mkdir ${scan_ip}_report
+    echo "* Building html report..."
+    if [ ! -d 'html' ]; then
+        mkdir html
+    fi
     wepage_head="<!doctype html>
 <html lang="en">
   <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-
     <title>SSL Report</title>
   </head>"
         
@@ -101,10 +102,9 @@ genReport(){
 
 echo $webpage_head > $report_path/index.html
 
-echo "  <body>
-    <h1>Hello, world!</h1>" > $report_path/index.html
+echo "  <body> <h1>Hello, world!</h1>" >> $report_path/index.html
 
-echo $webpage_foot > $report_path/index.html
+echo $webpage_foot >> $report_path/index.html
 
 }
 
@@ -112,12 +112,12 @@ cleanUp(){
     rm -rf *_list
 }
 
-preFlight;
-cleanUp;
-findHosts;
-scanHosts;
-querySsl;
+#preFlight;
+#cleanUp;
+#findHosts;
+#scanHosts;
+#querySsl;
 genReport;
-cleanUp;
+#cleanUp;
 
 exit 0
