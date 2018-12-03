@@ -32,6 +32,9 @@ port_list="25 110 143 443 465 587 993 995 8443"
 # path to write html report to
 report_path="${HOME}/html"
 
+# report name
+report_name="SSL report"
+
 preFlight () {
     echo -n "* Running preflight checks..."
     for cli in awk date nmap openssl timeout tr;
@@ -79,19 +82,25 @@ querySsl(){
         if [[ "$expiry_days" -lt "1" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> red_list <<EOF
+<tr>
 <td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
+</tr>
 EOF
             fi
         elif [[ "$expiry_days" -lt "$days_warning" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> yellow_list <<EOF
+<tr>
 <td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
+</tr>
 EOF
             fi
         else
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> green_list <<EOF
+<tr>
 <td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
+</tr>
 EOF
             fi
         fi
@@ -105,47 +114,17 @@ genReport(){
     fi
     mkdir $report_path
     cp -R src/css $report_path
+    cp -R src/favicon.ico $report_path
     cp -R src/js $report_path
+    cp -R src/webfonts $report_path
 
-#### BUILD REPORT PAGES
-cat << 'EOF' > $report_path/index.html
-<!doctype html>
-<html lang="en">
-<head>
-<!-- Required meta tags -->
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<!-- Bootstrap CSS -->
-<link rel="stylesheet" href="css/bootstrap.min.css" crossorigin="anonymous">
-<link rel="stylesheet" href="css/starter-template.css" crossorigin="anonymous">
-<title>SSL Report</title>
-</head><body>
-<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-<a class="navbar-brand" href="index.html">SSL Report</a>
-<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
-<span class="navbar-toggler-icon"></span>
-</button>
-<div class="collapse navbar-collapse" id="navbarsExampleDefault">
-<ul class="navbar-nav mr-auto">
-<li class="nav-item">
-<a class="nav-link" href="index.html">Expired</a>
-</li>
-<li class="nav-item">
-<a class="nav-link" href="expiring.html">Expiring</a>
-</li>
-<li class="nav-item">
-<a class="nav-link" href="valid.html">Valid</a>
-</li>
-</div>
-</nav>
-EOF
-
-cp $report_path/index.html $report_path/expiring.html
-cp $report_path/index.html $report_path/valid.html
+###### BUILD REPORT PAGES
+#### EXPIRED
+cat src/header.html >> $report_path/index.html
 
 cat << 'EOF' >> $report_path/index.html
 <div class="container">
-<h2>Expired</h2>
+<h2><span style="color: Red;"><i class="fas fa-circle" style="red"></i></span> Expired</h2>
 <p>The following SSL certifcates are expired</p>            
 <table class="table">
 <thead>
@@ -158,56 +137,62 @@ cat << 'EOF' >> $report_path/index.html
 <tbody>
 EOF
 
-## COMPLETE EXPIRED
-echo "<tr>" >> $report_path/index.html
 cat red_list >> $report_path/index.html
-echo "</tr>" >> $report_path/index.html
+cat src/footer.html >> $report_path/index.html
 
-cat << 'EOF' >> $report_path/index.html 
-</tbody>
-</table>
-</div>
-EOF
-
-cat << 'EOF' >> $report_path/index.html
-<script src="js/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
-<script src="js/popper.min.js" crossorigin="anonymous"></script>
-<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
-</body>
-</html>
-EOF
-
-## COMPLETE EXPIRING
+#### EXPIRING
+cat src/header.html >> $report_path/expiring.html
 
 cat << 'EOF' >> $report_path/expiring.html
-<script src="js/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
-<script src="js/popper.min.js" crossorigin="anonymous"></script>
-<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
-</body>
-</html>
+<div class="container">
+<h2><span style="color: Yellow;"><i class="fas fa-circle" style="red"></i></span> Expiring</h2>
+<p>The following SSL certifcates are expiring soon</p>            
+<table class="table">
+<thead>
+<tr>
+<th>Hostname:port</th>
+<th>Expiration date</th>
+<th>Days utill expired</th>
+</tr>
+</thead>
+<tbody>
 EOF
 
-## COMPLETE VALID 
+cat yellow_list >> $report_path/expiring.html
+cat src/footer.html >> $report_path/expiring.html
+
+#### VALID 
+cat src/header.html >> $report_path/valid.html
 
 cat << 'EOF' >> $report_path/valid.html
-<script src="js/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
-<script src="js/popper.min.js" crossorigin="anonymous"></script>
-<script src="js/bootstrap.min.js" crossorigin="anonymous"></script>
-</body>
-</html>
+<div class="container">
+<h2><span style="color: Green;"><i class="fas fa-circle" style="red"></i></span> Valid</h2>
+<p>The following SSL certifcates are currently valid</p>            
+<table class="table">
+<thead>
+<tr>
+<th>Hostname:port</th>
+<th>Expiration date</th>
+<th>Days until expired</th>
+</tr>
+</thead>
+<tbody>
 EOF
+
+cat green_list >> $report_path/valid.html
+cat src/footer.html >> $report_path/valid.html
 }
 
 cleanUp(){
     rm -rf *_list
 }
 
-#preFlight;
-#cleanUp;
-#findHosts;
-#scanHosts;
+preFlight;
+cleanUp;
+findHosts;
+scanHosts;
 querySsl;
 genReport;
-#cleanUp;
+cleanUp;
 
 exit 0
