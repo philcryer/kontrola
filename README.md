@@ -6,7 +6,7 @@ A script that uses nmap to sweep a subnet looking for ports with SSL certs, then
 
 ## Motivation
 
-There are plenty of scripts out there that will check SSL/TLS certificates and let you know when they're due for renewal, but none (that I've found) that can sweep a subnet, the check those live hosts for specific hosts to see if they host any certifcates. These "rogue" certs can become a problem, so here we are, trying to solve something with a script.
+There are plenty of scripts out there that will check SSL/TLS certificates and let you know when they're due for renewal, but none (that I've found) that can sweep a subnet, the check those live hosts for specific hosts to see if they host any certifcates, and then query those previously unknown certificates for their expiration dates. These "rogue" certs can become a problem, so here we are, trying to solve something with a script.
 
 ## Features
 
