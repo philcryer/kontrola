@@ -2,6 +2,8 @@
 
 _/kɔnˈtrɔ.la/ - inspection (the act of examining something, often closely) [Polish]_
 
+<iframe src="//commons.wikimedia.org/wiki/File:Pl-kontrola.ogg?embedplayer=yes" width="175" height="20" frameborder="0" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>
+
 A script that uses nmap to sweep a subnet looking for ports with SSL certs, then querying those certs to discover upcoming expiration dates.
 
 ## Motivation
