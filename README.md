@@ -1,6 +1,6 @@
 # kontrola
 
-_/kɔnˈtrɔ.la/ - inspection (the act of examining something, often closely) [Polish]_
+_/kɔnˈtrɔ.la/ - inspection (the act of examining something, often closely) [Polish]_ (<a href="https://commons.wikimedia.org/wiki/File:Pl-kontrola.ogg?embedplayer=yes">audio</a>) 
 
 <iframe src="//commons.wikimedia.org/wiki/File:Pl-kontrola.ogg?embedplayer=yes" width="175" height="20" frameborder="0" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>
 
