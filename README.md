@@ -29,6 +29,12 @@ cd kontrola
 ./kontrola
 ```
 
+## Screenshot
+
+The html report
+
+<div align="center"><img src="src/screenshot.png" border="1" alt="Screenshot"></div>
+
 ## License
 
 MIT License
