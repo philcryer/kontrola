@@ -33,7 +33,7 @@ cd kontrola
 
 The html report
 
-<div align="center"><img src="src/screenshot.png" border="1" alt="Screenshot"></div>
+<div align="center"><img src="src/screenshot.png" border="5" alt="Screenshot"></div>
 
 ## License
 
