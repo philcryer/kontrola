@@ -118,20 +118,15 @@ genReport(){
     if [ -d "$report_path" ]; then
         rm -rf $report_path
     fi
-    mkdir $report_path
-    cp -R src/css $report_path
-    cp -R src/favicon.ico $report_path
-    cp -R src/js $report_path
-    cp -R src/webfonts $report_path
+    mkdir -p $report_path
+    cp -R src/css src/favicon.ico src/js src/webfonts $report_path
 
 ###### BUILD REPORT PAGES
 #### SUMMARY
 cat src/header.html >> $report_path/index.html
 
-#cat << 'EOF' >> $report_path/index.html
 cat <<EOF >> $report_path/index.html
-<br />
-<ul>
+<div class="container">
 <div class="row">
 <div class="col-sm-3">
 <div class="card text-center text-white bg-danger" style="width: 18rem;">
@@ -161,23 +156,28 @@ cat <<EOF >> $report_path/index.html
 <div class="card text-center text-white bg-secondary" style="width: 18rem;">
 <div class="card-body">
 <h1 class="card-title">$(cat misconfigured_list | wc -l)</h5>
-<a href="" class="btn btn-light">Misconfigured</a>
+<a href="misconfigured.html" class="btn btn-light">Misconfigured</a>
 </div>
 </div>
 </div>
 </div>
-</ul>
+</div>
+EOF
+
+cat <<EOF >> $report_path/index.html
+<br /><br /><p class="text-center text-muted">Scan completed $(echo $time_stamp)</p>
 EOF
 
 cat src/footer.html >> $report_path/index.html
+####
 
 #### EXPIRED
 cat src/header.html >> $report_path/expired.html
 
-cat << 'EOF' >> $report_path/expired.html
+cat <<EOF >> $report_path/expired.html
 <div class="container">
 <h2><span style="color: Red;"><i class="fas fa-circle" style="red"></i></span> Expired</h2>
-<p>The following SSL certifcates are expired</p>            
+<p>$(echo $time_stamp) - the following SSL certificates have expired</p>            
 <table class="table">
 <thead>
 <tr>
@@ -190,15 +190,17 @@ cat << 'EOF' >> $report_path/expired.html
 EOF
 
 cat red_list >> $report_path/expired.html
+
 cat src/footer.html >> $report_path/expired.html
+####
 
 #### EXPIRING
 cat src/header.html >> $report_path/expiring.html
 
-cat << 'EOF' >> $report_path/expiring.html
+cat <<EOF >> $report_path/expiring.html
 <div class="container">
 <h2><span style="color: Yellow;"><i class="fas fa-circle" style="red"></i></span> Expiring</h2>
-<p>The following SSL certifcates are expiring soon</p>            
+<p>$(echo $time_stamp) - the following SSL certificates are expiring within $(echo $days_warning) days</p>            
 <table class="table">
 <thead>
 <tr>
@@ -211,15 +213,17 @@ cat << 'EOF' >> $report_path/expiring.html
 EOF
 
 cat yellow_list >> $report_path/expiring.html
+
 cat src/footer.html >> $report_path/expiring.html
+####
 
 #### VALID 
 cat src/header.html >> $report_path/valid.html
 
-cat << 'EOF' >> $report_path/valid.html
+cat <<EOF >> $report_path/valid.html
 <div class="container">
 <h2><span style="color: Green;"><i class="fas fa-circle" style="red"></i></span> Valid</h2>
-<p>The following SSL certifcates are currently valid</p>            
+<p>$(echo $time_stamp) - the following SSL certificates are currently valid</p>            
 <table class="table">
 <thead>
 <tr>
@@ -232,15 +236,17 @@ cat << 'EOF' >> $report_path/valid.html
 EOF
 
 cat green_list >> $report_path/valid.html
+
 cat src/footer.html >> $report_path/valid.html
+####
 
 #### MISCONFIGURED 
 cat src/header.html >> $report_path/misconfigured.html
 
-cat << 'EOF' >> $report_path/misconfigured.html
+cat <<EOF >> $report_path/misconfigured.html
 <div class="container">
 <h2><span style="color: Gray;"><i class="fas fa-circle" style="red"></i></span> Misconfigured</h2>
-<p>The following SSL certifcates are somehow misconfigured, and unable to be checked. Please check manually</p>            
+<p>$(echo $time_stamp) - the following SSL certificates are misconfigured, and unable to be checked. Please check them manually</p>            
 <table class="table">
 <thead>
 <tr>
@@ -253,7 +259,9 @@ cat << 'EOF' >> $report_path/misconfigured.html
 EOF
 
 cat misconfigured_list >> $report_path/misconfigured.html
+
 cat src/footer.html >> $report_path/misconfigured.html
+####
 }
 
 cleanUp(){
@@ -265,6 +273,8 @@ cleanUp;
 findHosts;
 scanHosts;
 querySsl;
+#time_stamp=$(date +"%d/%b/%Y:%k:%M:%S %z")
+time_stamp=$(date +"%d/%b/%Y:%k:%M:%S")
 genReport;
 cleanUp;
 
