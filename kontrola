@@ -22,18 +22,25 @@
 #
 # ------------------------------------------------------------------------------
 
-## Variables to define
+###### Variables to define
 # days until certificate experiation
-days_warning="30"
+#days_warning="30"
+days_warning="45"
 
 # ports to check for SSL certifcates
-port_list="25 110 143 443 465 587 993 995 8443"
+#port_list="25 110 143 443 465 587 993 995 8443"
+port_list="443 8443"
+
+# openssl s_client timeout
+scan_timeout="5"
 
 # path to write html report to
 report_path="${HOME}/html"
 
-# report name
-report_name="SSL report"
+# use static list instead of discovering hosts
+use_static_list="yes"
+static_list_file="hosts.txt"
+######
 
 preFlight () {
     echo -n "* Running preflight checks..."
@@ -74,7 +81,7 @@ querySsl(){
     cat combo_list | while read combo_set
     do
         echo -n "  -$combo_set   "
-        expiry_date=$( echo | timeout 1 openssl s_client -showcerts -connect $combo_set 2>/dev/null | openssl x509 -inform pem -noout -enddate | cut -d "=" -f 2 )
+        expiry_date=$( echo | timeout $scan_timeout openssl s_client -showcerts -connect $combo_set 2>/dev/null | openssl x509 -inform pem -noout -enddate | cut -d "=" -f 2 )
         echo -n " $expiry_date";
         expiry_epoch=$( date -d "$expiry_date" +%s )
         expiry_days="$(( ($expiry_epoch - $now_epoch) / (3600 * 24) ))"
@@ -270,10 +277,13 @@ cleanUp(){
 
 preFlight;
 cleanUp;
-findHosts;
+if [ ! -n "$use_static_list" ]; then
+    findHosts;
+else
+    cat $static_list_file > scan_list
+fi
 scanHosts;
 querySsl;
-#time_stamp=$(date +"%d/%b/%Y:%k:%M:%S %z")
 time_stamp=$(date +"%d/%b/%Y:%k:%M:%S")
 genReport;
 cleanUp;
