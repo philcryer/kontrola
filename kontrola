@@ -68,7 +68,7 @@ scanHosts(){
 }
 
 querySsl(){
-    touch green_list yellow_list red_list
+    touch green_list yellow_list red_list misconfigured_list
     echo "* Querying SSL info on $(cat combo_list | wc -l) host/port combos..."
     now_epoch=$( date +%s )
     cat combo_list | while read combo_set
@@ -82,25 +82,31 @@ querySsl(){
         if [[ "$expiry_days" -lt "1" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> red_list <<EOF
-<tr>
-<td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
-</tr>
+<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+EOF
+        else
+cat >> misconfigured_list <<EOF
+<tr><td>$combo_set</td><td>...</td><td>...</td></tr>
 EOF
             fi
         elif [[ "$expiry_days" -lt "$days_warning" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> yellow_list <<EOF
-<tr>
-<td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
-</tr>
+<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+EOF
+        else
+cat >> misconfigured_list <<EOF
+<tr><td>$combo_set</td><td>...</td><td>...</td></tr>
 EOF
             fi
         else
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
 cat >> green_list <<EOF
-<tr>
-<td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td>
-</tr>
+<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+EOF
+        else
+cat >> misconfigured_list <<EOF
+<tr><td>$combo_set</td><td>...</td><td>...</td></tr>
 EOF
             fi
         fi
@@ -119,10 +125,56 @@ genReport(){
     cp -R src/webfonts $report_path
 
 ###### BUILD REPORT PAGES
-#### EXPIRED
+#### SUMMARY
 cat src/header.html >> $report_path/index.html
 
-cat << 'EOF' >> $report_path/index.html
+#cat << 'EOF' >> $report_path/index.html
+cat <<EOF >> $report_path/index.html
+<br />
+<ul>
+<div class="row">
+<div class="col-sm-3">
+<div class="card text-center text-white bg-danger" style="width: 18rem;">
+<div class="card-body">
+<h1 class="card-title">$(cat red_list | wc -l)</h5>
+<a href="expired.html" class="btn btn-light">Expired</a>
+</div>
+</div>
+</div>
+<div class="col-sm-3">
+<div class="card text-center text-white bg-warning" style="width: 18rem;">
+<div class="card-body">
+<h1 class="card-title">$(cat yellow_list | wc -l)</h5>
+<a href="expiring.html" class="btn btn-light">Expiring</a>
+</div>
+</div>
+</div>
+<div class="col-sm-3">
+<div class="card text-center text-white bg-success" style="width: 18rem;">
+<div class="card-body">
+<h1 class="card-title">$(cat green_list | wc -l)</h5>
+<a href="valid.html" class="btn btn-light">Valid</a>
+</div>
+</div>
+</div>
+<div class="col-sm-3">
+<div class="card text-center text-white bg-secondary" style="width: 18rem;">
+<div class="card-body">
+<h1 class="card-title">$(cat misconfigured_list | wc -l)</h5>
+<a href="" class="btn btn-light">Misconfigured</a>
+</div>
+</div>
+</div>
+</div>
+</ul>
+EOF
+
+cat src/footer.html >> $report_path/index.html
+
+#### EXPIRED
+cat src/header.html >> $report_path/expired.html
+
+cat << 'EOF' >> $report_path/expired.html
 <div class="container">
 <h2><span style="color: Red;"><i class="fas fa-circle" style="red"></i></span> Expired</h2>
 <p>The following SSL certifcates are expired</p>            
@@ -137,8 +189,8 @@ cat << 'EOF' >> $report_path/index.html
 <tbody>
 EOF
 
-cat red_list >> $report_path/index.html
-cat src/footer.html >> $report_path/index.html
+cat red_list >> $report_path/expired.html
+cat src/footer.html >> $report_path/expired.html
 
 #### EXPIRING
 cat src/header.html >> $report_path/expiring.html
@@ -181,6 +233,27 @@ EOF
 
 cat green_list >> $report_path/valid.html
 cat src/footer.html >> $report_path/valid.html
+
+#### MISCONFIGURED 
+cat src/header.html >> $report_path/misconfigured.html
+
+cat << 'EOF' >> $report_path/misconfigured.html
+<div class="container">
+<h2><span style="color: Gray;"><i class="fas fa-circle" style="red"></i></span> Misconfigured</h2>
+<p>The following SSL certifcates are somehow misconfigured, and unable to be checked. Please check manually</p>            
+<table class="table">
+<thead>
+<tr>
+<th>Hostname:port</th>
+<th>Expiration date</th>
+<th>Days until expired</th>
+</tr>
+</thead>
+<tbody>
+EOF
+
+cat misconfigured_list >> $report_path/misconfigured.html
+cat src/footer.html >> $report_path/misconfigured.html
 }
 
 cleanUp(){
