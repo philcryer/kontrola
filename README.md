@@ -2,7 +2,7 @@
 
 _/kɔnˈtrɔ.la/ - inspection (the act of examining something, often closely) [Polish]_ (<a href="https://commons.wikimedia.org/wiki/File:Pl-kontrola.ogg?embedplayer=yes">audio</a>) 
 
-A script that uses nmap to sweep a subnet looking for ports with SSL certs, then querying those certs to discover upcoming expiration dates.
+A script that uses nmap to sweep a subnet looking for ports with SSL certs, then querying those certs to discover upcoming expiration dates. Besides discovery, it can also do more traditional tracking using a host based file that you provide. See usage for an example configuration.
 
 ## Motivation
 
@@ -11,6 +11,7 @@ There are plenty of scripts out there that will check SSL/TLS certificates and l
 ## Features
 
 * uses `nmap` to discover live hosts on a subnet
+* can use a static list instead for more traditional usage
 * pokes at live hosts, checking known TLS/SSL ports to see if they are available
 * query found certificates for experation dates
 * html output report using Bootstrap 4
@@ -24,7 +25,25 @@ git clone https://github.com/philcryer/kontrola.git
 cd kontrola
 ```
 
+### Portscan mode
+
 * Edit varables if desired
+* Run script
+
+```
+./kontrola
+```
+
+### Host list mode
+
+* create your host file and place it in the `kontrola` directory, for this example it will be called `hosts.txt`
+* Edit the static based variables:
+
+```
+use_static_list="yes"
+static_list_file="hosts.txt"
+```
+
 * Run script
 
 ```
