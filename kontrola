@@ -28,7 +28,7 @@
 days_warning="45"
 
 # ports to check for SSL certifcates
-#port_list="25 110 143 443 465 587 993 995 8443"
+#port_list="25 110 143 443 465 587 993 995 8443 8889"
 port_list="443 8443"
 
 # openssl s_client timeout
