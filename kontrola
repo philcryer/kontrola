@@ -42,7 +42,7 @@ port_list="443 8443"
 scan_timeout="5"
 
 # path to write html report to
-report_path="${HOME}/html/test"
+report_path="html"
 
 ######
 
