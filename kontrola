@@ -23,9 +23,16 @@
 # ------------------------------------------------------------------------------
 
 ###### Variables to define
+# use static list (DEFAULT) instead of discovering hosts on a subnet
+static_file="domains.txt"
+
+# run discovery over a subnet to find live hosts to check
+run_discovery="no"
+# discovery subnet ie- 10.10.0.0/16 (DEFUALT: localhosts-ip/32)
+#run_discovery_subnet=""
+
 # days until certificate experiation
-#days_warning="30"
-days_warning="45"
+days_warning="30"
 
 # ports to check for SSL certifcates
 #port_list="25 110 143 443 465 587 993 995 8443 8889"
@@ -35,11 +42,8 @@ port_list="443 8443"
 scan_timeout="5"
 
 # path to write html report to
-report_path="${HOME}/html"
+report_path="${HOME}/html/test"
 
-# use static list instead of discovering hosts
-use_static_list="yes"
-static_list_file="hosts.txt"
 ######
 
 preFlight () {
@@ -52,9 +56,11 @@ preFlight () {
 }
 
 findHosts(){
-    scan_ip=$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')
-    echo -n "* Scanning $scan_ip/24 subnet for live hosts..."
-    nmap -sn $scan_ip/24 | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
+    if [ -z "$run_discovery_subnet" }; then
+        run_discovery_subnet="$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')/24"
+    fi
+    echo -n "* Scanning $run_discovery_subnet subnet for live hosts..."
+    nmap -sn $run_discovery_subnet | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
     echo "$(cat scan_list | wc -l) found"
 }
 
@@ -72,6 +78,11 @@ scanHosts(){
          fi
       done
    done
+   combos_found=$(cat combo_list | wc -l)
+   if [ "$combos_found" == "0" ]; then
+        echo "ERROR: no hostnames:port found to scan, look at remaining _list files for details"
+        exit 1
+   fi
 }
 
 querySsl(){
@@ -277,10 +288,10 @@ cleanUp(){
 
 preFlight;
 cleanUp;
-if [ ! -n "$use_static_list" ]; then
+if [ "${run_discovery}" == 'yes' ]; then
     findHosts;
 else
-    cat $static_list_file > scan_list
+    cat $static_file > scan_list
 fi
 scanHosts;
 querySsl;
