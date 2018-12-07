@@ -22,14 +22,14 @@
 #
 # ------------------------------------------------------------------------------
 
-###### Variables to define
+###### Variables to define ######
 # use static list (DEFAULT) instead of discovering hosts on a subnet
 static_file="domains.txt"
 
 # run discovery over a subnet to find live hosts to check
-run_discovery="no"
+#discovery="no"
 # discovery subnet ie- 10.10.0.0/16 (DEFUALT: localhosts-ip/32)
-#run_discovery_subnet=""
+#discovery_subnet=""
 
 # days until certificate experiation
 days_warning="30"
@@ -43,8 +43,7 @@ scan_timeout="5"
 
 # path to write html report to
 report_path="html"
-
-######
+#################################
 
 preFlight () {
     echo -n "* Running preflight checks..."
@@ -56,11 +55,11 @@ preFlight () {
 }
 
 findHosts(){
-    if [ -z "$run_discovery_subnet" }; then
-        run_discovery_subnet="$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')/24"
+    if [ -z "$discovery_subnet" ]; then
+        discovery_subnet="$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')/24"
     fi
-    echo -n "* Scanning $run_discovery_subnet subnet for live hosts..."
-    nmap -sn $run_discovery_subnet | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
+    echo -n "* Scanning $discovery_subnet subnet for live hosts..."
+    nmap -sn $discovery_subnet | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
     echo "$(cat scan_list | wc -l) found"
 }
 
@@ -133,10 +132,12 @@ EOF
 
 genReport(){
     echo "* Building html report..."
-    if [ -d "$report_path" ]; then
-        rm -rf $report_path
+    if [[ ${discovery+x} ]]; then
+        report_path=$report_path/$(echo $discovery_subnet | cut -d"/" -f1)
     fi
-    mkdir -p $report_path
+    if [ ! -d "$report_path" ]; then
+        mkdir -p $report_path
+    fi
     cp -R src/css src/favicon.ico src/js src/webfonts $report_path
 
 ###### BUILD REPORT PAGES
@@ -288,7 +289,7 @@ cleanUp(){
 
 preFlight;
 cleanUp;
-if [ "${run_discovery}" == 'yes' ]; then
+if [ "${discovery}" == 'yes' ]; then
     findHosts;
 else
     cat $static_file > scan_list

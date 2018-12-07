@@ -34,6 +34,9 @@ cd kontrola
 ./kontrola
 ```
 
+discovery="yes" ./kontrola 
+discovery="yes" discovery_subnet="10.10.0.0/32" ./kontrola 
+
 ### Host list mode
 
 * create your host file and place it in the `kontrola` directory, for this example it will be called `hosts.txt`
