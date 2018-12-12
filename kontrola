@@ -73,10 +73,12 @@ scanHosts(){
          echo "  -$host_ip:$host_port"
          scan_result=$(nmap -p T:$host_port --open -n $host_ip |awk -F'/' '/open/ {print $1}' | wc -l)
          if [ "$scan_result" == "1" ]; then
-             echo $host_ip:$host_port >> combo_list
+             echo $host_ip:$host_port >> combo_list.base
          fi
       done
-   done
+   done 
+   #### Remove any dupes from the list before counting
+   awk '!x[$0]++' combo_list.base > combo_list
    combos_found=$(cat combo_list | wc -l)
    if [ "$combos_found" == "0" ]; then
         echo "ERROR: no hostnames:port found to scan, look at remaining _list files for details"
@@ -85,7 +87,7 @@ scanHosts(){
 }
 
 querySsl(){
-    touch green_list yellow_list red_list misconfigured_list
+    touch green_list.csv yellow_list.csv red_list.csv misconfigured_list
     echo "* Querying SSL info on $(cat combo_list | wc -l) host/port combos..."
     now_epoch=$( date +%s )
     cat combo_list | while read combo_set
@@ -98,8 +100,8 @@ querySsl(){
         echo "    $expiry_days days"
         if [[ "$expiry_days" -lt "1" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
-cat >> red_list <<EOF
-<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+cat >> red_list.csv <<EOF
+$combo_set,$expiry_date,$expiry_days
 EOF
         else
 cat >> misconfigured_list <<EOF
@@ -108,8 +110,8 @@ EOF
             fi
         elif [[ "$expiry_days" -lt "$days_warning" ]]; then
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
-cat >> yellow_list <<EOF
-<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+cat >> yellow_list.csv <<EOF
+$combo_set,$expiry_date,$expiry_days
 EOF
         else
 cat >> misconfigured_list <<EOF
@@ -118,8 +120,8 @@ EOF
             fi
         else
             if [[ -n "$combo_set" ]] && [[ -n "$expiry_date" ]] && [[ -n "$expiry_days" ]]; then 
-cat >> green_list <<EOF
-<tr><td>$combo_set</td><td>$expiry_date</td><td>$expiry_days</td></tr>
+cat >> green_list.csv <<EOF
+$combo_set,$expiry_date,$expiry_days
 EOF
         else
 cat >> misconfigured_list <<EOF
@@ -139,6 +141,29 @@ genReport(){
         mkdir -p $report_path
     fi
     cp -R src/css src/favicon.ico src/js src/webfonts $report_path
+
+    ### Sort and Format files (TODO do both of these functions in a loop)
+    # sort all by the 3rd field, but do reverse sort on red to show worst offenders 1st
+    sort -k 3 -r red_list.csv > red_list.sorted
+    sort -k 3 yellow_list.csv > yellow_list.sorted
+    sort -k 3 green_list.csv > green_list.sorted
+
+    # format sorted lists to have html
+	while read INPUT ; 
+    do
+  	    echo "<tr><td>${INPUT//,/</td><td>}</td></tr>" ;
+	done < red_list.sorted > red_list ;
+
+	while read INPUT ; 
+    do
+  	    echo "<tr><td>${INPUT//,/</td><td>}</td></tr>" ;
+	done < yellow_list.sorted > yellow_list ;
+
+	while read INPUT ; 
+    do
+  	    echo "<tr><td>${INPUT//,/</td><td>}</td></tr>" ;
+	done < green_list.sorted > green_list ;
+
 
 ###### BUILD REPORT PAGES
 #### SUMMARY
@@ -284,7 +309,7 @@ cat src/footer.html >> $report_path/misconfigured.html
 }
 
 cleanUp(){
-    rm -rf *_list
+    rm -rf *_list*
 }
 
 preFlight;
@@ -292,7 +317,8 @@ cleanUp;
 if [ "${discovery}" == 'yes' ]; then
     findHosts;
 else
-    cat $static_file > scan_list
+   #### Remove dupes from the list before scanning
+   awk '!x[$0]++' $static_file > scan_list
 fi
 scanHosts;
 querySsl;
