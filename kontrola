@@ -143,10 +143,10 @@ genReport(){
     cp -R src/css src/favicon.ico src/js src/webfonts $report_path
 
     ### Sort and Format files (TODO do both of these functions in a loop)
-    # sort all by the 3rd field, but do reverse sort on red to show worst offenders 1st
-    sort -k 3 -r red_list.csv > red_list.sorted
-    sort -k 3 yellow_list.csv > yellow_list.sorted
-    sort -k 3 green_list.csv > green_list.sorted
+    # sort output by the days remaining, or after expiration
+    awk '{print $0 }' red_list.csv | sort -t "," -k 3 -n -o red_list.sorted red_list.csv 
+    awk '{print $0 }' yellow_list.csv | sort -t "," -k 3 -n -o yellow_list.sorted yellow_list.csv 
+    awk '{print $0 }' green_list.csv | sort -t "," -k 3 -n -o green_list.sorted green_list.csv 
 
     # format sorted lists to have html
 	while read INPUT ; 
