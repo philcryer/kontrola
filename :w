@@ -11,14 +11,15 @@ There are plenty of scripts out there that will check SSL/TLS certificates and l
 ## Features
 
 * scans a static list of hosts for SSL certificate expiration dates (default)
-* bulids a simple, easy to read report in html using [Bootstrap](https://getbootstrap.com), listing all Expired, Expiring, and Valid certifcate dates
-* (optional) uses [nmap](https://nmap.org) to discover live hosts on a subnet, either the on the script is running on, or a targeted one
-* (optional) pokes at live hosts, checking known TLS/SSL ports to see if they are available
+* html output report using Bootstrap 4
+* builds a simple to read report, listing all Expired, Expiring, and Valid certifcate dates
+* uses `nmap` to discover live hosts on a subnet
+* pokes at live hosts, checking known TLS/SSL ports to see if they are available
+* also provides an easy to parse csv output file
 
 ## Usage
 
 * Checkout the code
-
 ```
 git clone https://github.com/philcryer/kontrola.git
 cd kontrola
@@ -34,18 +35,15 @@ cd kontrola
 ./kontrola
 ```
 
-Check the `html/` directory for the output report
-
 ### Portscan mode
 
-* Run the script, with discovery turned on
-* By default it will seach the `/32` of the subnet the host is running on 
+* Run the script, with discovery turned on. By default it will seach the `/32` of the subnet the host is running on 
 
 ```
 discovery="yes" ./kontrola 
 ```
 
-* Optionally you can list a subnet target for it to sweep
+* Run the script, with discovery turned on, and a subnet target specificed
 
 ```
 discovery="yes" discovery_subnet="10.10.0.0/32" ./kontrola 
@@ -56,12 +54,6 @@ discovery="yes" discovery_subnet="10.10.0.0/32" ./kontrola
 The html report is built using [Bootstrap](http://getbootstrap.com/), written to the `html/` directory by default, and is straightforward in its presentation
 
 <div align="center"><img src="src/screenshot.png" border="1" alt="Screenshot"></div>
-
-## Todo
-
-Possible upcoming features
-
-* provide an easy to parse csv output file, alongside the html output
 
 ## Acknoldegements
 
