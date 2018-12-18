@@ -212,7 +212,7 @@ cat <<EOF >> $report_path/index.html
 EOF
 
 cat <<EOF >> $report_path/index.html
-<br /><br /><p class="text-center text-muted">Scan completed $(echo $time_stamp)</p>
+<br /><br /><p class="text-center text-muted">Scan completed $(echo $time_stamp)  |  <a class="text-muted" href="$csv_report" alt="$csv_report">Export as CSV</a></p> 
 EOF
 
 cat src/footer.html >> $report_path/index.html
@@ -224,13 +224,13 @@ cat src/header.html >> $report_path/expired.html
 cat <<EOF >> $report_path/expired.html
 <div class="container">
 <h2><span style="color: Red;"><i class="fas fa-circle" style="red"></i></span> Expired</h2>
-<p>$(echo $time_stamp) - the following SSL certificates have expired</p>            
+<p>The scan on $(echo $time_stamp) found that the following SSL certificates have expired</p>            
 <table class="table">
 <thead>
 <tr>
 <th>Hostname:port</th>
 <th>Expiration date</th>
-<th>Days overdue</th>
+<th>Days since expiration</th>
 </tr>
 </thead>
 <tbody>
@@ -247,13 +247,13 @@ cat src/header.html >> $report_path/expiring.html
 cat <<EOF >> $report_path/expiring.html
 <div class="container">
 <h2><span style="color: Yellow;"><i class="fas fa-circle" style="red"></i></span> Expiring</h2>
-<p>$(echo $time_stamp) - the following SSL certificates are expiring within $(echo $days_warning) days</p>            
+<p>The scan on $(echo $time_stamp) found that the following SSL certificates are expiring within $(echo $days_warning) days</p>
 <table class="table">
 <thead>
 <tr>
 <th>Hostname:port</th>
 <th>Expiration date</th>
-<th>Days utill expired</th>
+<th>Days until expiration</th>
 </tr>
 </thead>
 <tbody>
@@ -270,13 +270,13 @@ cat src/header.html >> $report_path/valid.html
 cat <<EOF >> $report_path/valid.html
 <div class="container">
 <h2><span style="color: Green;"><i class="fas fa-circle" style="red"></i></span> Valid</h2>
-<p>$(echo $time_stamp) - the following SSL certificates are currently valid</p>            
+<p>The scan on $(echo $time_stamp) found that the following SSL certificates are valid for more than $(echo $days_warning) days</p>            
 <table class="table">
 <thead>
 <tr>
 <th>Hostname:port</th>
 <th>Expiration date</th>
-<th>Days until expired</th>
+<th>Days until expiration</th>
 </tr>
 </thead>
 <tbody>
@@ -311,8 +311,26 @@ cat src/footer.html >> $report_path/misconfigured.html
 ####
 }
 
+genCsv(){
+    echo "Scan completed $(echo $time_stamp)" > $csv_report
+    echo "Expired certificates" >> $csv_report
+    echo "Hostname,Date Expired,Days Since Expiration" >> $csv_report
+	cat red_list.sorted >> $csv_report ;
+
+    echo "Expiring certificates" >> $csv_report
+    echo "Hostname,Date of Expiration,Days Until Expiration" >> $csv_report
+	cat yellow_list.sorted >> $csv_report ;
+
+    echo "Valid certificates" >> $csv_report
+    echo "Hostname,Date of Expiration,Days Until Expiration" >> $csv_report
+	cat green_list.sorted >> $csv_report ;
+
+    mv $csv_report $report_path
+}
+
 cleanUp(){
     rm -rf *_list*
+    rm -rf *-ssl-report.csv
 }
 
 preFlight;
@@ -325,8 +343,10 @@ else
 fi
 scanHosts;
 querySsl;
-time_stamp=$(date +"%d/%b/%Y:%k:%M:%S")
+time_stamp=$(date +"%b %d, %Y at %k:%M:%S")
+csv_report=$(date +"%Y")-$(date +"%m")-$(date +"%d")-ssl-report.csv
 genReport;
+genCsv;
 cleanUp;
 
 exit 0
