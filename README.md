@@ -75,8 +75,7 @@ Other outstanding open source projects used to build, presesnt, and search the r
 
 * [nmap](https://nmap.org/) a security scanner used to discover live hosts and network ports
 * [Bootstrap](http://getbootstrap.com/) a front-end component library that builds the html reports
-* [Tipue Search](http://www.tipue.com/search/) a jQuery site search plugin forr the genearted reports
-* 
+* [Tipue Search](http://www.tipue.com/search/) a jQuery-based site search plugin for the genearted reports
 
 ## License
 

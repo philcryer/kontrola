@@ -1,0 +1,22 @@
+<!--search-->
+<div class="wrap">
+<div style="padding: 27px 0 49px 0;">
+<div class="grid">
+<div class="unit whole">
+<div class="fo-5">Search</div>
+<div style="padding-top: 33px;">
+<form>
+<div class="tipue_search_group">
+<input type="text" name="q" id="tipue_search_input" pattern=".{3,}" title="At least 3 characters" required><button type="submit" class="tipue_search_button"><div class="tipue_search_icon">&#9906;</div></button>
+</div>
+</form>
+<div id="tipue_search_content"></div>
+</div>
+</div>
+</div>
+<script>
+$(document).ready(function() {
+     $('#tipue_search_input').tipuesearch();
+});
+</script>
+<!--search-->
