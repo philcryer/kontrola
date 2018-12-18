@@ -66,6 +66,7 @@ findHosts(){
 scanHosts(){
    echo "${port_list[@]}" | tr ' ' '\n' > port_list
    echo "* Scanning $(cat scan_list | wc -l) hosts for $(cat port_list | wc -l) open ports..."
+   touch combo_list.base
    cat scan_list | while read host_ip
    do
       cat port_list | while read host_port
@@ -77,6 +78,11 @@ scanHosts(){
          fi
       done
    done 
+   #### Check that we have results, bomb if we don't
+   if [[ "$(cat combo_list.base | wc -l)" -lt "1" ]]; then
+        echo "ERROR: no host responses, look at remaining _list files for details"; exit 1
+   fi
+
    #### Remove any dupes from the list before counting
    awk '!x[$0]++' combo_list.base > combo_list
    combos_found=$(cat combo_list | wc -l)
