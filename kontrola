@@ -31,12 +31,13 @@ static_file="domains.txt"
 # discovery subnet ie- 10.10.0.0/16 (DEFUALT: localhosts-ip/32)
 #discovery_subnet=""
 
-# days until certificate experiation
+# days until certificate expiriation
 days_warning="30"
 
 # ports to check for SSL certifcates
+#port_list="443"
+port_list="443 8443"
 #port_list="25 110 143 443 465 587 993 995 8443 8889"
-port_list="443"
 
 # openssl s_client timeout
 scan_timeout="5"
@@ -45,60 +46,94 @@ scan_timeout="5"
 report_path="html"
 #################################
 
+
 preFlight () {
-    echo -n "* Running preflight checks..."
-    for cli in awk date nmap openssl timeout tr;
+    echo "* Preflight..."
+    for cli in awk date egrep grep nmap openssl timeout tr;
     do
         if ! type "$cli" > /dev/null 2>&1; then echo "ERROR: $cli is not installed, or in the PATH. Aborting."; fi
     done
-    echo "passed"
+    echo "  - passed"
 }
+
 
 findHosts(){
-    if [ -z "$discovery_subnet" ]; then
-        discovery_subnet="$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')/24"
+    echo "* Discovery..."
+    if [ "${discovery}" == 'yes' ]; then
+        echo "yes"
+        if [ -z "$discovery_subnet" ]; then
+            discovery_subnet="$(ping -c1 $(hostname) | head -n1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')/24"
+        fi
+        echo -n "   - scanning $discovery_subnet subnet for live hosts"
+        nmap -sn $discovery_subnet | grep 'Nmap scan report for' | cut -f5 -d' ' > $static_file
+        echo "$(cat scan_list | wc -l) found"
+    else
+        echo "  - not requested"
     fi
-    echo -n "* Scanning $discovery_subnet subnet for live hosts..."
-    nmap -sn $discovery_subnet | grep 'Nmap scan report for' | cut -f5 -d' ' > scan_list
-    echo "$(cat scan_list | wc -l) found"
 }
+
+
+sanitizeLists(){
+    echo "* Sanitize..."
+    echo "  - separating domain names from ips"
+    egrep '(([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])' $static_file > static_file_ips
+    egrep -v '(([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])' $static_file > static_file_domains
+
+    if [ -f static_file_ips ]; then 
+        echo "  - trying to resolve found ips"
+        cat static_file_ips | xargs -n1 dig +noall +answer -x | awk '{print $5}' > static_file_ips.resolved
+    fi
+
+    echo "  - building list with domains and any unresolvabled ips"
+    cat static_file_ips.resolved static_file_domains > pre_scan_list
+
+    echo "  - removing dupes from completed list"
+    awk '!x[$0]++' pre_scan_list > scan_list
+    echo "  - list contains $(cat scan_list | wc -l) entries"
+}
+
 
 scanHosts(){
-   echo "${port_list[@]}" | tr ' ' '\n' > port_list
-   echo "* Scanning $(cat scan_list | wc -l) hosts for $(cat port_list | wc -l) open ports..."
-   touch combo_list.base
-   cat scan_list | while read host_ip
-   do
-      cat port_list | while read host_port
-      do
-         echo "  -$host_ip:$host_port"
-         scan_result=$(nmap -p T:$host_port --open -n $host_ip |awk -F'/' '/open/ {print $1}' | wc -l)
-         if [ "$scan_result" == "1" ]; then
-             echo $host_ip:$host_port >> combo_list.base
-         fi
-      done
-   done 
-   #### Check that we have results, bomb if we don't
-   if [[ "$(cat combo_list.base | wc -l)" -lt "1" ]]; then
-        echo "ERROR: no host responses, look at remaining _list files for details"; exit 1
-   fi
+    echo "* Scanning..."
+    echo "${port_list[@]}" | tr ' ' '\n' > port_list
+    echo "   - scanning $(cat scan_list | wc -l) hosts for ports $(cat port_list)"
+    touch combo_list.base
+    cat scan_list | while read host_ip
+    do
+        cat port_list | while read host_port
+        do
+            echo "      $host_ip:$host_port"
+            scan_result=$(nmap -p T:$host_port --open -n $host_ip |awk -F'/' '/open/ {print $1}' | wc -l)
+            if [ "$scan_result" == "1" ]; then
+                echo $host_ip:$host_port >> combo_list.base
+            fi
+        done
+    done 
 
-   #### Remove any dupes from the list before counting
-   awk '!x[$0]++' combo_list.base > combo_list
-   combos_found=$(cat combo_list | wc -l)
-   if [ "$combos_found" == "0" ]; then
+    if [[ "$(cat combo_list.base | wc -l)" -lt "1" ]]; then
+        echo "ERROR: no host responses, look at remaining _list files for details"; exit 1
+    fi
+
+    echo "   - building new host:port combo list"
+    awk '!x[$0]++' combo_list.base > combo_list
+    combos_found=$(cat combo_list | wc -l)
+    if [ "$combos_found" == "0" ]; then
         echo "ERROR: no hostnames:port found to scan, look at remaining _list files for details"
         exit 1
-   fi
+    fi
+
+    echo "   - found $combos_found host:port combos for interrogation"
 }
 
+
 querySsl(){
+    echo "* Querying SSL..."
     touch green_list.csv yellow_list.csv red_list.csv misconfigured_list
-    echo "* Querying SSL info on $(cat combo_list | wc -l) host/port combos..."
+    echo "   - querying the $combos_found host:port combos"
     now_epoch=$( date +%s )
     cat combo_list | while read combo_set
     do
-        echo -n "  -$combo_set   "
+        echo -n "       $combo_set   "
         expiry_date=$( echo | timeout $scan_timeout openssl s_client -showcerts -connect $combo_set 2>/dev/null | openssl x509 -inform pem -noout -enddate | cut -d "=" -f 2 )
         echo -n " $expiry_date";
         expiry_epoch=$( date -d "$expiry_date" +%s )
@@ -136,10 +171,16 @@ EOF
             fi
         fi
     done
+    echo "   - separate lists built for expired, expiring, and valid"
 }
 
+
 genReport(){
-    echo "* Building html report..."
+    echo "* Report..."
+    time_stamp=$(date +"%b %d, %Y at %k:%M:%S")
+    simple_time_stamp=$(date +"%Y")-$(date +"%m")-$(date +"%d")
+    csv_report=$simple_time_stamp-ssl-report.csv
+    echo "  - creating report path"
     if [ -d "$report_path" ]; then
         rm -rf $report_path/*
     fi
@@ -149,8 +190,9 @@ genReport(){
     if [ ! -d "$report_path" ]; then
         mkdir -p $report_path
     fi
-    cp -R src/css src/favicon.ico src/js src/webfonts $report_path
+    #<!--cp -R src/css src/favicon.ico src/js src/webfonts $report_path-->
 
+    echo "  - sorting output lists"
     ### Sort and Format files (TODO do both of these functions in a loop)
     # sort output by the days remaining, or after expiration
     awk '{print $0 }' red_list.csv | sort -t "," -k 3 -n -o red_list.sorted red_list.csv 
@@ -173,10 +215,12 @@ genReport(){
   	    echo "<tr><td>${INPUT//,/</td><td>}</td></tr>" ;
 	done < green_list.sorted > green_list ;
 
+    echo "  - building html report"
 
 ###### BUILD REPORT PAGES
 #### SUMMARY
-cat src/header.html >> $report_path/index.html
+    echo "      summary page"
+    cat src/header.html >> $report_path/index.html
 
 cat <<EOF >> $report_path/index.html
 <div class="container">
@@ -213,21 +257,22 @@ cat <<EOF >> $report_path/index.html
 </div>
 </div>
 </div>-->
-</div>
-</div>
+<!--</div>
+</div>-->
 EOF
 
-# cat src/search.html >> $report_path/index.html -->
+    cat src/search.html >> $report_path/index.html 
 
 cat <<EOF >> $report_path/index.html
-<br /><br /><div align="center"><p class="text-center text-muted">Scan completed $(echo $time_stamp)  |  <a class="text-muted" href="$csv_report" alt="$csv_report">Export as CSV</a></p></div>
+<div align="center"><p class="text-center text-muted">Scan completed $(echo $time_stamp)  |  <a class="text-muted" href="$csv_report" alt="$csv_report">Export as CSV</a></p></div>
 EOF
 
-cat src/footer.html >> $report_path/index.html
+    cat src/footer.html >> $report_path/index.html
 ####
 
 #### EXPIRED
-cat src/header.html >> $report_path/expired.html
+    echo "      expired page"
+    cat src/header.html >> $report_path/expired.html
 
 cat <<EOF >> $report_path/expired.html
 <div class="container">
@@ -244,13 +289,13 @@ cat <<EOF >> $report_path/expired.html
 <tbody>
 EOF
 
-cat red_list >> $report_path/expired.html
-
-cat src/footer.html >> $report_path/expired.html
+    cat red_list >> $report_path/expired.html
+    cat src/footer.html >> $report_path/expired.html
 ####
 
 #### EXPIRING
-cat src/header.html >> $report_path/expiring.html
+    echo "      expiring page"
+    cat src/header.html >> $report_path/expiring.html
 
 cat <<EOF >> $report_path/expiring.html
 <div class="container">
@@ -267,13 +312,14 @@ cat <<EOF >> $report_path/expiring.html
 <tbody>
 EOF
 
-cat yellow_list >> $report_path/expiring.html
+    cat yellow_list >> $report_path/expiring.html
+    cat src/footer.html >> $report_path/expiring.html
 
-cat src/footer.html >> $report_path/expiring.html
 ####
 
 #### VALID 
-cat src/header.html >> $report_path/valid.html
+    echo "      valid page"
+    cat src/header.html >> $report_path/valid.html
 
 cat <<EOF >> $report_path/valid.html
 <div class="container">
@@ -290,13 +336,11 @@ cat <<EOF >> $report_path/valid.html
 <tbody>
 EOF
 
-cat green_list >> $report_path/valid.html
-
-cat src/footer.html >> $report_path/valid.html
-####
+    cat green_list >> $report_path/valid.html
+    cat src/footer.html >> $report_path/valid.html
 
 #### MISCONFIGURED 
-cat src/header.html >> $report_path/misconfigured.html
+    cat src/header.html >> $report_path/misconfigured.html
 
 cat <<EOF >> $report_path/misconfigured.html
 <div class="container">
@@ -313,48 +357,133 @@ cat <<EOF >> $report_path/misconfigured.html
 <tbody>
 EOF
 
-cat misconfigured_list >> $report_path/misconfigured.html
-
-cat src/footer.html >> $report_path/misconfigured.html
-####
+    cat misconfigured_list >> $report_path/misconfigured.html
+    cat src/footer.html >> $report_path/misconfigured.html
 }
 
+
+genSearch(){
+    echo "var tipuesearch = {"pages": [" > search_list
+
+   cat search_list | while read line
+   do
+        echo "     {\"title\": \"$(awk -F':' '{print $1}')\"}," >> search_list
+        echo "     {"title": "$(awk -F':' '{print $1}')"}," >> search_list
+    echo "]};" >> search_list
+    done
+    exit 0
+
+#    cat red_list.sorted | echo "     {\"title\": \"$(awk -F':' '{print $1}')\"\, \"text\": \"Expiration date $(awk -F',' '{print $2}')\", \"url\": \"expired.html\"}," >> search_list
+
+#     {"title": "Tipue", "text": "Tipue is a small web development studio based in North London.", "url": "http://www.tipue.com"},
+#     {"title": "Tipue Search, a jQuery Site Search Plugin", "text": "Tipue Search is a site search jQuery plugin. It's free, open source, responsive and fast. Tipue Search only needs a browser that supports jQuery. It doesn't need MySQL or similar. It doesn't even need a web server.", "img": "http://www.tipue.com/img/surface.jpg", "tags": "JavaScript", "url": "http://www.tipue.com/search"},
+    echo "]};" >> search_list
+    exit 0
+    mv search_list src/js/tipuesearch/tipuesearch_content.js
+}
+
+
 genCsv(){
-    echo "Scan completed $(echo $time_stamp)" > $csv_report
-    echo "Expired certificates" >> $csv_report
-    echo "Hostname,Date Expired,Days Since Expiration" >> $csv_report
-	cat red_list.sorted >> $csv_report ;
+    echo "* CSV file..."
+    echo "  - building csv file"
+    echo "      header"
+    echo "Hostname,IP Address,Port,Expiration Date,Status,Days +/-" > $csv_report
 
-    echo "Expiring certificates" >> $csv_report
-    echo "Hostname,Date of Expiration,Days Until Expiration" >> $csv_report
-	cat yellow_list.sorted >> $csv_report ;
+    echo "      expired list"
+    cat red_list.sorted | while read line
+    do
+       hostname=$(echo $line | awk -F":" '{print $1}')
+       ip_address=$(dig +noall +answer $hostname | egrep -o '(([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])')
+       port=$(echo $line | awk -F":" '{print $2}' | cut -d"," -f1)
+       expiration=$(echo $line | awk -F"," '{print $2}')
+       status="expired"
+       days=$(echo $line | awk -F"," '{print $3}')
+       echo -n $hostname >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $ip_address >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $port >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $expiration >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $status >> $csv_report
+       echo -n "," >> $csv_report
+       echo $days >> $csv_report
+    done
 
-    echo "Valid certificates" >> $csv_report
-    echo "Hostname,Date of Expiration,Days Until Expiration" >> $csv_report
-	cat green_list.sorted >> $csv_report ;
+    echo "      expiring list"
+    cat yellow_list.sorted | while read line
+    do
+       hostname=$(echo $line | awk -F":" '{print $1}')
+       ip_address=$(dig +noall +answer $hostname | egrep -o '(([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])')
+       port=$(echo $line | awk -F":" '{print $2}' | cut -d"," -f1)
+       expiration=$(echo $line | awk -F"," '{print $2}')
+       status="expiring"
+       days=$(echo $line | awk -F"," '{print $3}')
+       echo -n $hostname >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $ip_address >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $port >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $expiration >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $status >> $csv_report
+       echo -n "," >> $csv_report
+       echo $days >> $csv_report
+    done
 
+    echo "      valid list"
+    cat green_list.sorted | while read line
+    do
+       hostname=$(echo $line | awk -F":" '{print $1}')
+       ip_address=$(dig +noall +answer $hostname | egrep -o '(([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])')
+       port=$(echo $line | awk -F":" '{print $2}' | cut -d"," -f1)
+       expiration=$(echo $line | awk -F"," '{print $2}')
+       status="valid"
+       days=$(echo $line | awk -F"," '{print $3}')
+       echo -n $hostname >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $ip_address >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $port >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $expiration >> $csv_report
+       echo -n "," >> $csv_report
+       echo -n $status >> $csv_report
+       echo -n "," >> $csv_report
+       echo $days >> $csv_report
+    done
+}
+
+deployReport(){
+    echo "* Deploying..."
+    echo "  - html support files"
+    cp -R src/css src/favicon.ico src/js src/webfonts $report_path
+    echo "  - deploying csv report file"
     mv $csv_report $report_path
 }
 
 cleanUp(){
     rm -rf *_list*
+    rm -rf static_file_*
     rm -rf *-ssl-report.csv
+    rm -rf src/js/tipuesearch/tipuesearch_content.js
 }
 
+##### Program #####
 preFlight;
 cleanUp;
-if [ "${discovery}" == 'yes' ]; then
-    findHosts;
-else
-   #### Remove dupes from the list before scanning
-   awk '!x[$0]++' $static_file > scan_list
-fi
+findHosts;
+sanitizeLists;
 scanHosts;
 querySsl;
-time_stamp=$(date +"%b %d, %Y at %k:%M:%S")
-csv_report=$(date +"%Y")-$(date +"%m")-$(date +"%d")-ssl-report.csv
 genReport;
+#genSearch;
 genCsv;
+deployReport;
 cleanUp;
+###################
+
 
 exit 0
