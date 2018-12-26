@@ -362,27 +362,6 @@ EOF
 }
 
 
-genSearch(){
-    echo "var tipuesearch = {"pages": [" > search_list
-
-   cat search_list | while read line
-   do
-        echo "     {\"title\": \"$(awk -F':' '{print $1}')\"}," >> search_list
-        echo "     {"title": "$(awk -F':' '{print $1}')"}," >> search_list
-    echo "]};" >> search_list
-    done
-    exit 0
-
-#    cat red_list.sorted | echo "     {\"title\": \"$(awk -F':' '{print $1}')\"\, \"text\": \"Expiration date $(awk -F',' '{print $2}')\", \"url\": \"expired.html\"}," >> search_list
-
-#     {"title": "Tipue", "text": "Tipue is a small web development studio based in North London.", "url": "http://www.tipue.com"},
-#     {"title": "Tipue Search, a jQuery Site Search Plugin", "text": "Tipue Search is a site search jQuery plugin. It's free, open source, responsive and fast. Tipue Search only needs a browser that supports jQuery. It doesn't need MySQL or similar. It doesn't even need a web server.", "img": "http://www.tipue.com/img/surface.jpg", "tags": "JavaScript", "url": "http://www.tipue.com/search"},
-    echo "]};" >> search_list
-    exit 0
-    mv search_list src/js/tipuesearch/tipuesearch_content.js
-}
-
-
 genCsv(){
     echo "* CSV file..."
     echo "  - building csv file"
@@ -456,13 +435,36 @@ genCsv(){
     done
 }
 
+
+genSearch(){
+    echo "var tipuesearch = {"pages": [" > search_list
+
+   cat search_list | while read line
+   do
+        echo "     {\"title\": \"$(awk -F':' '{print $1}')\"}," >> search_list
+        echo "     {"title": "$(awk -F':' '{print $1}')"}," >> search_list
+    echo "]};" >> search_list
+    done
+    exit 0
+
+#    cat red_list.sorted | echo "     {\"title\": \"$(awk -F':' '{print $1}')\"\, \"text\": \"Expiration date $(awk -F',' '{print $2}')\", \"url\": \"expired.html\"}," >> search_list
+
+#     {"title": "Tipue", "text": "Tipue is a small web development studio based in North London.", "url": "http://www.tipue.com"},
+#     {"title": "Tipue Search, a jQuery Site Search Plugin", "text": "Tipue Search is a site search jQuery plugin. It's free, open source, responsive and fast. Tipue Search only needs a browser that supports jQuery. It doesn't need MySQL or similar. It doesn't even need a web server.", "img": "http://www.tipue.com/img/surface.jpg", "tags": "JavaScript", "url": "http://www.tipue.com/search"},
+    echo "]};" >> search_list
+    exit 0
+    mv search_list src/js/tipuesearch/tipuesearch_content.js
+}
+
+
 deployReport(){
     echo "* Deploying..."
     echo "  - html support files"
     cp -R src/css src/favicon.ico src/js src/webfonts $report_path
-    echo "  - deploying csv report file"
+    echo "  - csv report file"
     mv $csv_report $report_path
 }
+
 
 cleanUp(){
     rm -rf *_list*
@@ -470,6 +472,7 @@ cleanUp(){
     rm -rf *-ssl-report.csv
     rm -rf src/js/tipuesearch/tipuesearch_content.js
 }
+
 
 ##### Program #####
 preFlight;
