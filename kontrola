@@ -220,7 +220,7 @@ genReport(){
 ###### BUILD REPORT PAGES
 #### SUMMARY
     echo "      summary page"
-    cat src/header.html >> $report_path/index.html
+    cat src/header_index.html >> $report_path/index.html
 
 cat <<EOF >> $report_path/index.html
 <div class="container">
@@ -437,22 +437,23 @@ genCsv(){
 
 
 genSearch(){
+    echo "* Search results..."
+    tail -n+2 $csv_report > search_list.csv
+    echo "  - building js file"
+    echo "      header"
     echo "var tipuesearch = {"pages": [" > search_list
 
-   cat search_list | while read line
-   do
-        echo "     {\"title\": \"$(awk -F':' '{print $1}')\"}," >> search_list
-        echo "     {"title": "$(awk -F':' '{print $1}')"}," >> search_list
-    echo "]};" >> search_list
+    cat search_list.csv | while read search_line
+    do
+        title=$(echo $search_line | awk -F"," '{print $1}')
+        text=$(echo $search_line | awk -F"," '{print $2}')
+        port=$(echo $search_line | awk -F"," '{print $3}')
+        status=$(echo $search_line | awk -F"," '{print $5}')
+        echo "     {\"title\": \"${title}\", \"text\": \"Certificate on ${title} (${text}:${port}) is ${status}\", \"url\": \"${status}.html\"}," >> search_list
     done
-    exit 0
 
-#    cat red_list.sorted | echo "     {\"title\": \"$(awk -F':' '{print $1}')\"\, \"text\": \"Expiration date $(awk -F',' '{print $2}')\", \"url\": \"expired.html\"}," >> search_list
-
-#     {"title": "Tipue", "text": "Tipue is a small web development studio based in North London.", "url": "http://www.tipue.com"},
-#     {"title": "Tipue Search, a jQuery Site Search Plugin", "text": "Tipue Search is a site search jQuery plugin. It's free, open source, responsive and fast. Tipue Search only needs a browser that supports jQuery. It doesn't need MySQL or similar. It doesn't even need a web server.", "img": "http://www.tipue.com/img/surface.jpg", "tags": "JavaScript", "url": "http://www.tipue.com/search"},
+    echo "      footer"
     echo "]};" >> search_list
-    exit 0
     mv search_list src/js/tipuesearch/tipuesearch_content.js
 }
 
@@ -482,8 +483,8 @@ sanitizeLists;
 scanHosts;
 querySsl;
 genReport;
-#genSearch;
 genCsv;
+genSearch;
 deployReport;
 cleanUp;
 ###################

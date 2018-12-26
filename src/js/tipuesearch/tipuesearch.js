@@ -17,18 +17,18 @@ http://www.tipue.com/search
           'contextLength'          : 60,
           'contextStart'           : 90,
           'debug'                  : false,
-          'descriptiveWords'       : 25,
+          'descriptiveWords'       : 40,
           'footerPages'            : 3,
           'highlightTerms'         : true,
           'imageZoom'              : true,
           'minimumLength'          : 3,
           'newWindow'              : false,
-          'show'                   : 10,
+          'show'                   : 20,
           'showContext'            : true,
           'showRelated'            : false,
-          'showTime'               : true,
+          'showTime'               : false,
           'showTitleCount'         : true,
-          'showURL'                : true,
+          'showURL'                : false,
           'wholeWords'             : true
           }, options);
 
