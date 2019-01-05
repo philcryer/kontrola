@@ -15,6 +15,12 @@ There are plenty of scripts out there that will check SSL/TLS certificates and l
 * (optional) uses [nmap](https://nmap.org) to discover live hosts on a subnet, either the on the script is running on, or a targeted one
 * (optional) pokes at live hosts, checking known TLS/SSL ports to see if they are available
 
+## Report screenshots
+
+The html report is built using [Bootstrap](http://getbootstrap.com/), written to the `html/` directory by default, and is straightforward in its presentation
+
+<div align="center"><img src="src/screenshot.png" border="1" alt="Screenshot"></div>
+
 ## Usage
 
 * Checkout the code
@@ -51,12 +57,6 @@ discovery="yes" ./kontrola
 discovery="yes" discovery_subnet="10.10.0.0/32" ./kontrola 
 ```
 
-## Report screenshots
-
-The html report is built using [Bootstrap](http://getbootstrap.com/), written to the `html/` directory by default, and is straightforward in its presentation
-
-<div align="center"><img src="src/screenshot.png" border="1" alt="Screenshot"></div>
-
 ## Todo
 
 (Possible) upcoming features
@@ -67,7 +67,7 @@ The html report is built using [Bootstrap](http://getbootstrap.com/), written to
 * generate a PDF report with red/yellow/green icons showing what is due/expired
 * email alerts, or at least have an email option `kontrola -e` to have the report emailed (again, PDF would be better for this than the html out)
 
-### As always, pull requests welcome!
+#### As always, pull requests welcome!
 
 ## Acknoldegements
 
