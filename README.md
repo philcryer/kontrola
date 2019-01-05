@@ -59,9 +59,15 @@ The html report is built using [Bootstrap](http://getbootstrap.com/), written to
 
 ## Todo
 
-Possible upcoming features
+(Possible) upcoming features
 
+* switches so you can run `kontrola -d` to do discovery, instead of setting the variable and running it
+* find a javascript plugin to allow for searching of found hostnames
 * provide an easy to parse csv output file, alongside the html output
+* generate a PDF report with red/yellow/green icons showing what is due/expired
+* email alerts, or at least have an email option `kontrola -e` to have the report emailed (again, PDF would be better for this than the html out)
+
+### As always, pull requests welcome!
 
 ## Acknoldegements
 
@@ -73,15 +79,15 @@ Like most (all?) good software, `kontrola` builds off of other excellent open so
 
 Other outstanding open source projects used to build, presesnt, and search the reports
 
-* [nmap](https://nmap.org/) a security scanner used to discover live hosts and network ports
-* [Bootstrap](http://getbootstrap.com/) a front-end component library that builds the html reports
-* [Tipue Search](http://www.tipue.com/search/) a jQuery-based site search plugin for the genearted reports
+* [nmap](https://nmap.org/) a security scanner used to discover live hosts and query network ports
+* [Bootstrap](http://getbootstrap.com/) a front-end component library that is used to build the html reports
+* [Tipue Search](http://www.tipue.com/search/) a jQuery-based site search plugin for the genearted html reports
 
 ## License
 
 MIT License
 
-Copyright (c) 2018 Phil Cryer
+Copyright (c) 2019 Phil Cryer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
