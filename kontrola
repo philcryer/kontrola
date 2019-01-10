@@ -35,8 +35,8 @@ static_file="domains.txt"
 days_warning="30"
 
 # ports to check for SSL certifcates
-#port_list="443"
-port_list="443 8443"
+port_list="443"
+#port_list="443 8443"
 #port_list="25 110 143 443 465 587 993 995 8443 8889"
 
 # openssl s_client timeout
@@ -81,7 +81,8 @@ sanitizeLists(){
 
     if [ -f static_file_ips ]; then 
         echo "  - trying to resolve found ips"
-        cat static_file_ips | xargs -n1 dig +noall +answer -x | awk '{print $5}' > static_file_ips.resolved
+        #cat static_file_ips | xargs -n1 dig +noall +answer -x | awk '{print $5}' > static_file_ips.resolved
+        cat static_file_ips | xargs -n1 dig +noall +answer | awk '{print $5}' > static_file_ips.resolved
     fi
 
     echo "  - building list with domains and any unresolvabled ips"
